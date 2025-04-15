@@ -64,38 +64,26 @@ def pandas_sorted_by_serv_or_acc(pa):
 
 
 def slow_or_faild_events(pa):
-    # Вычисляем длительность событий
     duration_seconds = events_duration(pa)
     print(duration_seconds)
-    # Создаем маску для строк, где statusCode не равен 200
     mask_status = pa["statusCode"] != 200
 
-    # Обработка столбца serverLatencyMs:
-    # Если столбец существует, используем его для создания маски
-    # Если отсутствует, создаем маску из нулей (все False)
     if "serverLatencyMs" in pa.columns:
         mask_latency = pa["serverLatencyMs"] > 50
     else:
         mask_latency = pd.Series([False] * len(pa), index=pa.index)
-
-    # Комбинированная маска: True, если выполняется хотя бы одно из условий
     combined_mask = mask_status | mask_latency
 
-    # Если найдены строки, удовлетворяющие условию
     if combined_mask.any():
-        # Определяем, какие столбцы включать в результирующий DataFrame
         cols = ["eventType", "statusCode"]
         if "serverLatencyMs" in pa.columns:
             cols.append("serverLatencyMs")
         else:
-            # Если столбца нет, можно создать его и заполнить нулями
             pa = pa.copy()
             pa["serverLatencyMs"] = 0
             cols.append("serverLatencyMs")
 
-        # Выбираем строки, удовлетворяющие условию, с указанными столбцами
         slow_or_failed_df = pa.loc[combined_mask, cols].copy()
-        # Добавляем столбец с длительностью события
         slow_or_failed_df["duration_seconds"] = duration_seconds.loc[combined_mask]
         return slow_or_failed_df
     else:
