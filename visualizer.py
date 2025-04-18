@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Dict
 import pandas as pd
 import matplotlib.pyplot as plt
-from dto.main import pandas_counter, pandas_sorted_by_serv_or_acc, events_duration
+from dto.main import pandas_counter_event, pandas_sorted_by_serv_or_acc, events_duration
 from modal.pars_modal import parse_file
 
 def plot_event_counts(counts, download_path):
@@ -61,7 +61,7 @@ def plot_latency_duration_line_chart(durat, download_path):
 def main() -> None:
     log_path = Path(r"D:\Program Files (x86)\PyProject\QA_TestAssignment\testLogs\changes_output.txt")
     pa = pd.DataFrame(parse_file(log_path))
-    event_counts = pandas_counter(pa)
+    event_counts = pandas_counter_event(pa)
     serverIP_ID = pandas_sorted_by_serv_or_acc(pa)
     durations = events_duration(pa)
     download_path_bar = "bar_chart.png"

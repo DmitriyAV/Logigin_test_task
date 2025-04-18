@@ -3,26 +3,31 @@ from pathlib import Path
 import pandas as pd
 from typing import Dict
 
-def pandas_counter(pa):
+
+def pandas_counter_event(pa):
     if "eventTypePerformed" in pa.columns:
-        perfm_ev_count = pa["eventTypePerformed"].value_counts().to_frame()
-    else:
-        perfm_ev_count = pd.DataFrame()
-    if "eventType" in pa.columns:
-        ty_ev_count = pa["eventType"].value_counts().to_frame()
-        unknown_events = pa["eventType"].fillna("unknown").value_counts().to_frame()
-    else:
-        ty_ev_count = pd.DataFrame()
-        unknown_events = pd.DataFrame()
-    res_coun_ev = pd.concat([perfm_ev_count, ty_ev_count, unknown_events], axis=1).fillna(0).astype(int)
-    return res_coun_ev
+        perfm_ev_count = pa["eventTypePerformed"].value_counts().dropna()
+
+    return perfm_ev_count
+
+
+def all_performed_ve(pa):
+    if "eventTypePerformed" in pa.columns:
+        matches = pa["eventTypePerformed"].dropna()
+        json_expanded = pa
+        subset = json_expanded[
+            ['log_time', 'time', 'log_header', 'resourceId', 'operationName', 'account_id', 'eventTypePerformed']]
+
+    return matches
+
 
 def avareng_event_time(pa):
-    if "durationMs" in pa.columns:
-        _ = pa["durationMs"].mean()
+    # if "durationMs" in pa.columns:
+    #     _ = pa["durationMs"].mean()
     if "serverLatencyMs" in pa.columns:
-        latency_avg = pa.groupby("eventType")["serverLatencyMs"].mean().sort_values(ascending=False)
+        latency_avg = pa.groupby("eventTypePerformed")["serverLatencyMs"].mean().sort_values(ascending=False)
         return latency_avg
+
 
 def top_server_event(pa):
     if "callerIpAddress" in pa.columns:
@@ -31,22 +36,22 @@ def top_server_event(pa):
     else:
         return None
 
+
 def events_duration(pa):
-    if "time" in pa.columns:
-        end_time = pd.to_datetime(pa["time"], utc=True)
-    elif "eventTime" in pa.columns:
-        end_time = pd.to_datetime(pa["eventTime"], utc=True)
+    if "log_time" in pa.columns:
+        start_time = pd.to_datetime(pa["log_time"], utc=True)
     else:
         raise ValueError("Не найден столбец времени начала ('time' или 'eventTime').")
 
-    if "time_global" in pa.columns:
-        start_time = pd.to_datetime(pa["time_global"], utc=True)
+    if "eventTime" in pa.columns:
+        end_time = pd.to_datetime(pa["eventTime"], utc=True)
     else:
         raise ValueError("Не найден столбец времени конца ('timestamp').")
 
     duration_seconds = (start_time - end_time).dt.total_seconds()
 
-    return duration_seconds
+    return duration_seconds.dropna()
+
 
 def pandas_sorted_by_serv_or_acc(pa):
     results = {}
@@ -59,7 +64,7 @@ def pandas_sorted_by_serv_or_acc(pa):
     if len(results) == 1:
         single_key = list(results.keys())[0]
         return next(iter(results.values())).to_frame()
-    combined_df = pd.concat(results, axis=1).fillna(0).astype(int)
+    combined_df = pd.concat(results, axis=1).fillna(0).astype(int).dropna()
     return combined_df
 
 
@@ -93,10 +98,15 @@ def slow_or_faild_events(pa):
 def main():
     log_path = Path(r"D:\Program Files (x86)\PyProject\QA_TestAssignment\testLogs\changes_output.txt")
     pa = pd.DataFrame(parse_file(log_path))
-    pandas_counter(pa)
-    avareng_event_time(pa)
-    top_server_event(pa).head()
-    slow_or_faild_events(pa)
-
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.max_rows', None)
+    pd.set_option('display.max_colwidth', None)
+    pd.set_option('display.width', None)
+    # print(pandas_counter_event(pa))
+    all_performed_ve(pa)
+    # avareng_event_time(pa)
+    # top_server_event(pa).head()
+    # slow_or_faild_events(pa)
+    print(events_duration(pa))
 if __name__ == "__main__":
     main()
